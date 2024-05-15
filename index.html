@@ -97,12 +97,12 @@
           canvasElement.height
         );
 
-        let gesturesDetected = []; // Array to hold detected gestures
+        let gesturesDetected = [];
         if (results.multiHandLandmarks) {
           for (const landmarks of results.multiHandLandmarks) {
-            const gesture = recognizeGesture(landmarks); // Recognize gesture
+            const gesture = recognizeGesture(landmarks);
             if (gesture) {
-              gesturesDetected.push(gesture); // Add detected gesture to the list
+              gesturesDetected.push(gesture);
             }
 
             drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
@@ -115,17 +115,17 @@
             });
           }
 
-          const message = determineMessage(gesturesDetected); // Determine the message based on detected gestures
+          const message = determineMessage(gesturesDetected);
           if (message) {
-            canvasCtx.fillStyle = "#FFC0CB"; // Set the color for the message text
-            canvasCtx.font = "50px Arial"; // Set the font for the message text
+            canvasCtx.fillStyle = "#FFC0CB"; // Color for the text
+            canvasCtx.font = "30px Arial"; // Adjusted font size
             const metrics = canvasCtx.measureText(message);
             const textWidth = metrics.width;
             canvasCtx.fillText(
               message,
               canvasElement.width / 2 - textWidth / 2,
               50
-            ); // Draw the message on the canvas
+            ); // Draw the message centered
           }
         }
 
