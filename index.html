@@ -97,9 +97,14 @@
           canvasElement.height
         );
 
-        let gesturesDetected = [];
+        let gesturesDetected = []; // Array to hold detected gestures
         if (results.multiHandLandmarks) {
           for (const landmarks of results.multiHandLandmarks) {
+            const gesture = recognizeGesture(landmarks); // Recognize gesture
+            if (gesture) {
+              gesturesDetected.push(gesture); // Add detected gesture to the list
+            }
+
             drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
               color: "#00FA9A",
               lineWidth: 5,
@@ -109,8 +114,67 @@
               lineWidth: 2,
             });
           }
+
+          const message = determineMessage(gesturesDetected); // Determine the message based on detected gestures
+          if (message) {
+            canvasCtx.fillStyle = "#FFC0CB"; // Set the color for the message text
+            canvasCtx.font = "50px Arial"; // Set the font for the message text
+            const metrics = canvasCtx.measureText(message);
+            const textWidth = metrics.width;
+            canvasCtx.fillText(
+              message,
+              canvasElement.width / 2 - textWidth / 2,
+              50
+            ); // Draw the message on the canvas
+          }
         }
+
         canvasCtx.restore();
+      }
+
+      function recognizeGesture(landmarks) {
+        const thumbTip = landmarks[4];
+        const indexTip = landmarks[8];
+
+        // Recognizing Thumbs Up
+        const thumbIP = landmarks[3]; // Intermediate Phalange of Thumb
+        const isThumbUp = thumbTip.y < thumbIP.y;
+
+        // Recognizing Thumbs Down
+        const isThumbDown = thumbTip.y > thumbIP.y;
+
+        if (isThumbUp) return "Thumbs Up!";
+        if (isThumbDown) return "Thumbs Down";
+
+        return null; // Return null if no gesture recognized
+      }
+
+      function determineMessage(gestures) {
+        const upCount = gestures.filter((g) => g === "Thumbs Up!").length;
+        const downCount = gestures.filter((g) => g === "Thumbs Down").length;
+
+        if (upCount > 0 && downCount > 0) {
+          return "Thumbs Up and Down!";
+        } else if (upCount > 0) {
+          return "Thumbs Up!";
+        } else if (downCount > 0) {
+          return "Thumbs Down";
+        }
+        return null; // Return null if no gestures were detected
+      }
+
+      function determineMessage(gestures) {
+        const upCount = gestures.filter((g) => g === "Thumbs Up!").length;
+        const downCount = gestures.filter((g) => g === "Thumbs Down").length;
+
+        if (upCount > 0 && downCount > 0) {
+          return "Thumbs Up and Down!";
+        } else if (upCount > 0) {
+          return "Thumbs Up!";
+        } else if (downCount > 0) {
+          return "Thumbs Down";
+        }
+        return null; // No recognized gestures
       }
 
       setupCamera();
