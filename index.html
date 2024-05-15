@@ -210,26 +210,54 @@ These indices are critical for programming specific gestures because they allow 
           `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       });
 
-      //new Hands : initializes the MediaPipe Hands Model!
-      hands.setOptions({
-        maxNumHands: 2,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
-      hands.onResults(onResults);
-      // .setOptions(...): Configures options like the maximum number of hands to track and the model complexity.
-      //.onResults(onResults): Registers the onResults function to handle the output from the hand model.
-      //new Camera(...): Initializes the camera with specified dimensions.
-      //camera.start(): Starts capturing video from the camera to process for hand tracking.
-      const camera = new Camera(videoElement, {
-        onFrame: async () => {
-          await hands.send({ image: videoElement });
-        },
-        width: 640,
-        height: 480,
-      });
-      camera.start();
+      function setupCamera() {
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: "user", // or 'environment' to switch to rear camera
+          },
+        };
+
+        navigator.mediaDevices
+          .getUserMedia(constraints)
+          .then((stream) => {
+            videoElement.srcObject = stream;
+            videoElement.play();
+            initMediaPipe();
+          })
+          .catch((error) => {
+            console.error("Error accessing the camera:", error);
+            alert("Error accessing the camera.");
+          });
+      }
+
+      function initMediaPipe() {
+        const hands = new Hands({
+          locateFile: (file) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        });
+
+        hands.setOptions({
+          maxNumHands: 2,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+
+        hands.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+          onFrame: async () => {
+            await hands.send({ image: videoElement });
+          },
+          width: 1280,
+          height: 720,
+        });
+
+        camera.start();
+      }
+
+      setupCamera();
     </script>
     <style>
       body,
@@ -246,5 +274,24 @@ These indices are critical for programming specific gestures because they allow 
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       }
     </style>
+    <script>
+      function resizeCanvas() {
+        // Maintain an aspect ratio for the canvas
+        const aspectRatio = 16 / 9;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const heightBasedWidth = height * aspectRatio;
+        const canvasWidth = Math.min(width, heightBasedWidth);
+        const canvasHeight = canvasWidth / aspectRatio;
+
+        canvasElement.width = canvasWidth;
+        canvasElement.style.width = `${canvasWidth}px`;
+        canvasElement.height = canvasHeight;
+        canvasElement.style.height = `${canvasHeight}px`;
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas(); // Call immediately to ensure proper sizing initially
+    </script>
   </body>
 </html>
