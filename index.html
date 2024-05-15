@@ -3,15 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <title>Hand Gesture Recognition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
-    <style>
-      .output_canvas {
-        border: 2px solid #000; /* Black border */
-        background-color: #f0f0f0; /* Light grey background */
-      }
-    </style>
     <style>
       body,
       html {
@@ -25,216 +20,32 @@
           #ffafbd,
           #ffc3a0
         ); /* Pink gradient */
-        font-family: Arial, sans-serif; /* Adds default font for consistency */
+        font-family: Arial, sans-serif;
       }
       .output_canvas {
-        border: 2px solid #000; /* Black border */
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+        border: 2px solid #000;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      video {
+        display: none; /* Keeps video feed invisible but active */
       }
     </style>
   </head>
   <body>
-    <video class="input_video" style="display: none"></video>
+    <video class="input_video" playsinline autoplay muted></video>
     <canvas class="output_canvas"></canvas>
     <script>
-      const videoElement = document.getElementsByClassName("input_video")[0];
-      const canvasElement = document.getElementsByClassName("output_canvas")[0];
+      const videoElement = document.querySelector(".input_video");
+      const canvasElement = document.querySelector(".output_canvas");
       const canvasCtx = canvasElement.getContext("2d");
-      // References to the video and canvas HTML elements.
-      //2D rendering context for the canvas, used to draw images and shapes.
-      function resizeCanvas() {
-        let width = window.innerWidth;
-        let height = window.innerHeight;
-        let scale = Math.min(width / 1280, height / 720); // Scale based on 1280x720 aspect ratio
-
-        canvasElement.width = 1280 * scale;
-        canvasElement.height = 720 * scale;
-
-        // Update the canvas style to center it
-        canvasElement.style.width = `${canvasElement.width}px`;
-        canvasElement.style.height = `${canvasElement.height}px`;
-      }
-
-      window.addEventListener("resize", resizeCanvas);
-      resizeCanvas();
-      function onResults(results) {
-        canvasCtx.save();
-        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        canvasCtx.drawImage(
-          results.image,
-          0,
-          0,
-          canvasElement.width,
-          canvasElement.height
-        );
-
-        let gesturesDetected = []; // Store gestures detected for all hands
-
-        if (results.multiHandLandmarks) {
-          for (const landmarks of results.multiHandLandmarks) {
-            const gesture = recognizeGesture(landmarks);
-            if (gesture) {
-              gesturesDetected.push(gesture); // Add detected gesture to the list
-            }
-
-            const colors = getGestureColors(gesture);
-            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
-              color: colors.connectorColor,
-              lineWidth: 5,
-            });
-            drawLandmarks(canvasCtx, landmarks, {
-              color: colors.landmarkColor,
-              lineWidth: 2,
-            });
-          }
-
-          // Determine what message to display based on the gestures detected
-          const message = determineMessage(gesturesDetected);
-          if (message) {
-            canvasCtx.fillStyle = "#FFC0CB"; // Set text color to pink
-            canvasCtx.font = "50px Arial";
-            // Measure text to center it
-            const metrics = canvasCtx.measureText(message);
-            const textWidth = metrics.width;
-            canvasCtx.fillText(
-              message,
-              canvasElement.width / 2 - textWidth / 2,
-              50
-            ); // Center the message at the top
-          }
-        }
-
-        canvasCtx.restore();
-      }
-
-      // fillText(message, x, y): This method of canvasCtx draws the text on the canvas at the coordinates specified by x and y. Here, message is the text to be drawn.
-      //canvasElement.width / 2 - textWidth / 2: This calculation determines the x position where the text should start being drawn so that it appears centered:
-      //canvasElement.width / 2: This computes half of the canvas's total width, finding the center point of the canvas.
-      //textWidth / 2: This computes half of the text's width.
-      //By subtracting half of the text's width from the center of the canvas, we set the starting point of the text such that the text's center aligns with the canvas's center, effectively centering the text horizontally.
-      //50: This is the y position where the text will be drawn. It sets the text 50 pixels down from the top of the canvas. This value is arbitrary and can be adjusted depending on how far down from the top you want the text to appear.
-
-      function determineMessage(gestures) {
-        const upCount = gestures.filter((g) => g === "Thumbs Up!").length;
-        const downCount = gestures.filter((g) => g === "Thumbs Down").length;
-
-        if (upCount > 0 && downCount > 0) {
-          return "Thumbs Up and Down!"; // Both thumbs up and down detected
-        } else if (upCount > 0) {
-          return "Thumbs Up!"; // Only thumbs up detected
-        } else if (downCount > 0) {
-          return "Thumbs Down"; // Only thumbs down detected
-        }
-        return null; // No recognized gestures
-      }
-
-      // For each set of landmarks, the gesture is recognized, the appropriate colors are fetched, and connectors and landmarks are drawn on the canvas.
-
-      function recognizeGesture(landmarks) {
-        const thumbTip = landmarks[4];
-        const indexTip = landmarks[8];
-        const middleTip = landmarks[12];
-        const ringTip = landmarks[16];
-        const pinkyTip = landmarks[20];
-
-        const thumbIP = landmarks[3];
-        const indexMCP = landmarks[5];
-        const middleMCP = landmarks[9];
-        const ringMCP = landmarks[13];
-        const pinkyMCP = landmarks[17];
-
-        const isThumbUp = thumbTip.y < thumbIP.y;
-        const isThumbDown = thumbTip.y > thumbIP.y;
-
-        if (isThumbUp) return "Thumbs Up!";
-        if (isThumbDown) return "Thumbs Down";
-
-        return null; // No recognized gesture
-      }
-
-      /*
-In the MediaPipe Hands API, each hand is represented by 21 landmarks. 
-These landmarks are specific points on the hand that the model recognizes and tracks, giving you detailed positional data about various parts of the hand. Here's what each landmark number generally corresponds to:
-
-Hand Landmarks and Their Index Numbers
-Wrist (Index 0): The base of the hand and the wrist.
-
-Thumb:
-
-CMC (Carpometacarpal) Joint (Index 1): The base joint of the thumb.
-MCP (Metacarpophalangeal) Joint (Index 2): The middle joint of the thumb.
-IP (Interphalangeal) Joint (Index 3): The joint near the tip of the thumb.
-Tip (Index 4): The tip of the thumb.
-
-Index Finger:
-
-MCP Joint (Index 5): The joint of the index finger closest to the wrist.
-PIP (Proximal Interphalangeal) Joint (Index 6): The middle joint of the index finger.
-DIP (Distal Interphalangeal) Joint (Index 7): The joint near the tip of the index finger.
-Tip (Index 8): The tip of the index finger.
-
-Middle Finger:
-MCP Joint (Index 9): The joint of the middle finger closest to the wrist.
-PIP Joint (Index 10): The middle joint of the middle finger.
-DIP Joint (Index 11): The joint near the tip of the middle finger.
-Tip (Index 12): The tip of the middle finger.
-Ring Finger:
-
-MCP Joint (Index 13): The joint of the ring finger closest to the wrist.
-PIP Joint (Index 14): The middle joint of the ring finger.
-DIP Joint (Index 15): The joint near the tip of the ring finger.
-Tip (Index 16): The tip of the ring finger.
-Pinky (Little Finger):
-
-MCP Joint (Index 17): The joint of the pinky closest to the wrist.
-PIP Joint (Index 18): The middle joint of the pinky.
-DIP Joint (Index 19): The joint near the tip of the pinky.
-Tip (Index 20): The tip of the pinky.
-Visualization and Use
-These landmarks are used in your code to detect gestures by comparing the positions of these points relative to each other. For example:
-
-Detecting a "Thumbs Up" might involve checking if the tip of the thumb (Index 4) is higher (on the canvas, which means a lower y-value) than its IP joint (Index 3).
-The "Peace Sign" gesture might look at whether the tips of the index (Index 8) and middle fingers (Index 12) are higher than their respective MCP joints (Indexes 5 and 9), and significantly apart from each other.
-These indices are critical for programming specific gestures because they allow you to reference exact points on the hand model predicted by MediaPipe. This positional data is foundational for any gesture-based interaction, enabling applications ranging from sign language recognition to more interactive gaming controls.
-
-*/
-      function getGestureColors(gesture) {
-        switch (gesture) {
-          case "Thumbs Up!":
-            return {
-              connectorColor: "#00FF00", // Green for thumbs up
-              landmarkColor: "#FFC0CB", // Pink landmarks
-              textColor: "#0000FF", // Blue text
-            };
-          case "Thumbs Down":
-            return {
-              connectorColor: "#FF0000", // Red for thumbs down
-              landmarkColor: "#00FFFF", // Cyan landmarks
-              textColor: "#FF00FF", // Magenta text
-            };
-          default:
-            return {
-              connectorColor: "#FFFFFF", // White for default
-              landmarkColor: "#FFFFFF", // White landmarks
-              textColor: "#000000", // Black text
-            };
-        }
-      }
-
-      // Uses a switch statement to return specific colors for connectors, landmarks, and text based on the gesture.
-
-      // Setup and start the MediaPipe Hands model and camera:
-
-      const hands = new Hands({
-        locateFile: (file) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-      });
 
       function setupCamera() {
         const constraints = {
           audio: false,
           video: {
-            facingMode: "user", // or 'environment' to switch to rear camera
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
           },
         };
 
@@ -242,12 +53,11 @@ These indices are critical for programming specific gestures because they allow 
           .getUserMedia(constraints)
           .then((stream) => {
             videoElement.srcObject = stream;
-            videoElement.play();
             initMediaPipe();
           })
           .catch((error) => {
             console.error("Error accessing the camera:", error);
-            alert("Error accessing the camera.");
+            alert("Error accessing the camera: " + error.message);
           });
       }
 
@@ -273,45 +83,47 @@ These indices are critical for programming specific gestures because they allow 
           width: 1280,
           height: 720,
         });
-
         camera.start();
       }
 
+      function onResults(results) {
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.drawImage(
+          results.image,
+          0,
+          0,
+          canvasElement.width,
+          canvasElement.height
+        );
+
+        let gesturesDetected = [];
+        if (results.multiHandLandmarks) {
+          for (const landmarks of results.multiHandLandmarks) {
+            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+              color: "#00FA9A",
+              lineWidth: 5,
+            });
+            drawLandmarks(canvasCtx, landmarks, {
+              color: "#FF6347",
+              lineWidth: 2,
+            });
+          }
+        }
+        canvasCtx.restore();
+      }
+
       setupCamera();
-    </script>
-    <style>
-      body,
-      html {
-        height: 100%;
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-color: #f0f0f0;
-      }
-      .output_canvas {
-        border: 2px solid #000;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      }
-    </style>
-    <script>
+
       function resizeCanvas() {
-        // Maintain an aspect ratio for the canvas
-        const aspectRatio = 16 / 9;
         const width = window.innerWidth;
         const height = window.innerHeight;
-        const heightBasedWidth = height * aspectRatio;
-        const canvasWidth = Math.min(width, heightBasedWidth);
-        const canvasHeight = canvasWidth / aspectRatio;
-
-        canvasElement.width = canvasWidth;
-        canvasElement.style.width = `${canvasWidth}px`;
-        canvasElement.height = canvasHeight;
-        canvasElement.style.height = `${canvasHeight}px`;
+        canvasElement.width = width;
+        canvasElement.height = height;
       }
 
       window.addEventListener("resize", resizeCanvas);
-      resizeCanvas(); // Call immediately to ensure proper sizing initially
+      resizeCanvas();
     </script>
   </body>
 </html>
